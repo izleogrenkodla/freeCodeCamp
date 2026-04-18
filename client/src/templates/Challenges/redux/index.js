@@ -1,385 +1,350 @@
-import { createAction, handleActions } from 'redux-actions';
+import { isEmpty } from 'lodash-es';
+import { handleActions } from 'redux-actions';
 
-import { createTypes } from '../../../../utils/stateManagement';
-
-import { createPoly } from '../utils/polyvinyl';
-import challengeModalEpic from './challenge-modal-epic';
-import completionEpic from './completion-epic';
-import codeLockEpic from './code-lock-epic';
-import createQuestionEpic from './create-question-epic';
+import { getLines } from '@freecodecamp/shared/utils/get-lines';
+import { getTargetEditor } from '../utils/get-target-editor';
+import { actionTypes, ns } from './action-types';
 import codeStorageEpic from './code-storage-epic';
-
-import { createExecuteChallengeSaga } from './execute-challenge-saga';
+import completionEpic from './completion-epic';
+import createQuestionEpic from './create-question-epic';
 import { createCurrentChallengeSaga } from './current-challenge-saga';
-import { challengeTypes } from '../../../../utils/challengeTypes';
-import { completedChallengesSelector } from '../../../redux';
+import { createAskSocratesSaga } from './ask-socrates-saga';
+import { createExecuteChallengeSaga } from './execute-challenge-saga';
 
-export const ns = 'challenge';
-export const backendNS = 'backendChallenge';
+export { ns };
 
 const initialState = {
   canFocusEditor: true,
-  challengeFiles: {},
+  attempts: 0,
+  visibleEditors: {},
+  challengeFiles: [],
   challengeMeta: {
     superBlock: '',
     block: '',
+    blockHashSlug: '/',
     id: '',
+    isLastChallengeInBlock: false,
     nextChallengePath: '/',
     prevChallengePath: '/',
-    introPath: '',
-    challengeType: -1
+    challengeType: -1,
+    saveSubmissionToDB: false,
+    description: ''
   },
   challengeTests: [],
-  consoleOut: '',
+  consoleOut: [],
+  userCompletedExam: null,
   hasCompletedBlock: false,
-  inAccessibilityMode: false,
-  isCodeLocked: false,
   isBuildEnabled: true,
+  isExecuting: false,
+  isResetting: false,
+  logsOut: [],
   modal: {
     completion: false,
     help: false,
     video: false,
-    reset: false
+    reset: false,
+    exitExam: false,
+    finishExam: false,
+    exitQuiz: false,
+    finishQuiz: false,
+    examResults: false,
+    survey: false,
+    projectPreview: false,
+    shortcuts: false,
+    speaking: false
   },
+  portalWindow: null,
+  showPreviewPortal: false,
+  showPreviewPane: true,
+  isProjectPreviewLoading: false,
   projectFormValues: {},
-  successMessage: 'Happy Coding!'
+  successMessage: 'Happy Coding!',
+  isAdvancing: false,
+  chapterSlug: '',
+  isSubmitting: false,
+  socratesHintState: {
+    hint: null,
+    isLoading: false,
+    error: null,
+    attempts: null,
+    limit: null
+  }
 };
 
-export const types = createTypes(
-  [
-    'createFiles',
-    'createQuestion',
-    'initTests',
-    'initConsole',
-    'initLogs',
-    'updateBackendFormValues',
-    'updateConsole',
-    'updateChallengeMeta',
-    'updateFile',
-    'updateJSEnabled',
-    'updateProjectFormValues',
-    'updateSuccessMessage',
-    'updateTests',
-    'updateLogs',
-    'cancelTests',
-
-    'logsToConsole',
-
-    'lockCode',
-    'unlockCode',
-    'disableBuildOnError',
-    'storedCodeFound',
-    'noStoredCodeFound',
-
-    'closeModal',
-    'openModal',
-
-    'previewMounted',
-    'challengeMounted',
-    'checkChallenge',
-    'executeChallenge',
-    'resetChallenge',
-    'submitChallenge',
-
-    'moveToTab',
-
-    'setEditorFocusability',
-    'setAccessibilityMode',
-
-    'lastBlockChalSubmitted'
-  ],
-  ns
-);
-
-export const epics = [
-  challengeModalEpic,
-  codeLockEpic,
-  completionEpic,
-  createQuestionEpic,
-  codeStorageEpic
-];
+export const epics = [completionEpic, createQuestionEpic, codeStorageEpic];
 
 export const sagas = [
-  ...createExecuteChallengeSaga(types),
-  ...createCurrentChallengeSaga(types)
+  ...createExecuteChallengeSaga(actionTypes),
+  ...createCurrentChallengeSaga(actionTypes),
+  ...createAskSocratesSaga(actionTypes)
 ];
-
-export const createFiles = createAction(types.createFiles, challengeFiles =>
-  Object.keys(challengeFiles)
-    .filter(key => challengeFiles[key])
-    .map(key => challengeFiles[key])
-    .reduce(
-      (challengeFiles, file) => ({
-        ...challengeFiles,
-        [file.key]: {
-          ...createPoly(file),
-          seed: file.contents.slice(0)
-        }
-      }),
-      {}
-    )
-);
-
-export const createQuestion = createAction(types.createQuestion);
-export const initTests = createAction(types.initTests);
-export const updateTests = createAction(types.updateTests);
-export const cancelTests = createAction(types.cancelTests);
-
-export const initConsole = createAction(types.initConsole);
-export const initLogs = createAction(types.initLogs);
-export const updateBackendFormValues = createAction(
-  types.updateBackendFormValues
-);
-export const updateChallengeMeta = createAction(types.updateChallengeMeta);
-export const updateFile = createAction(types.updateFile);
-export const updateConsole = createAction(types.updateConsole);
-export const updateLogs = createAction(types.updateLogs);
-export const updateJSEnabled = createAction(types.updateJSEnabled);
-export const updateProjectFormValues = createAction(
-  types.updateProjectFormValues
-);
-export const updateSuccessMessage = createAction(types.updateSuccessMessage);
-
-export const logsToConsole = createAction(types.logsToConsole);
-
-export const lockCode = createAction(types.lockCode);
-export const unlockCode = createAction(types.unlockCode);
-export const disableBuildOnError = createAction(types.disableBuildOnError);
-export const storedCodeFound = createAction(types.storedCodeFound);
-export const noStoredCodeFound = createAction(types.noStoredCodeFound);
-
-export const closeModal = createAction(types.closeModal);
-export const openModal = createAction(types.openModal);
-
-export const previewMounted = createAction(types.previewMounted);
-export const challengeMounted = createAction(types.challengeMounted);
-export const checkChallenge = createAction(types.checkChallenge);
-export const executeChallenge = createAction(types.executeChallenge);
-export const resetChallenge = createAction(types.resetChallenge);
-export const submitChallenge = createAction(types.submitChallenge);
-
-export const moveToTab = createAction(types.moveToTab);
-
-export const setEditorFocusability = createAction(types.setEditorFocusability);
-export const setAccessibilityMode = createAction(types.setAccessibilityMode);
-
-export const lastBlockChalSubmitted = createAction(
-  types.lastBlockChalSubmitted
-);
-
-export const currentTabSelector = state => state[ns].currentTab;
-export const challengeFilesSelector = state => state[ns].challengeFiles;
-export const challengeMetaSelector = state => state[ns].challengeMeta;
-export const challengeTestsSelector = state => state[ns].challengeTests;
-export const consoleOutputSelector = state => state[ns].consoleOut;
-export const completedChallengesIds = state =>
-  completedChallengesSelector(state).map(node => node.id);
-export const isChallengeCompletedSelector = state => {
-  const completedChallenges = completedChallengesSelector(state);
-  const { id: currentChallengeId } = challengeMetaSelector(state);
-  return completedChallenges.some(({ id }) => id === currentChallengeId);
-};
-export const isCodeLockedSelector = state => state[ns].isCodeLocked;
-export const isCompletionModalOpenSelector = state =>
-  state[ns].modal.completion;
-export const isHelpModalOpenSelector = state => state[ns].modal.help;
-export const isVideoModalOpenSelector = state => state[ns].modal.video;
-export const isResetModalOpenSelector = state => state[ns].modal.reset;
-export const isBuildEnabledSelector = state => state[ns].isBuildEnabled;
-export const successMessageSelector = state => state[ns].successMessage;
-
-export const backendFormValuesSelector = state =>
-  state[ns].backendFormValues || {};
-export const projectFormValuesSelector = state =>
-  state[ns].projectFormValues || {};
-
-export const challengeDataSelector = state => {
-  const { challengeType } = challengeMetaSelector(state);
-  let challengeData = { challengeType };
-  if (
-    challengeType === challengeTypes.js ||
-    challengeType === challengeTypes.bonfire
-  ) {
-    challengeData = {
-      ...challengeData,
-      files: challengeFilesSelector(state)
-    };
-  } else if (challengeType === challengeTypes.backend) {
-    const { solution: url = {} } = backendFormValuesSelector(state);
-    challengeData = {
-      ...challengeData,
-      url
-    };
-  } else if (challengeType === challengeTypes.backEndProject) {
-    const values = projectFormValuesSelector(state);
-    const { solution: url } = values;
-    challengeData = {
-      ...challengeData,
-      ...values,
-      url
-    };
-  } else if (challengeType === challengeTypes.frontEndProject) {
-    challengeData = {
-      ...challengeData,
-      ...projectFormValuesSelector(state)
-    };
-  } else if (
-    challengeType === challengeTypes.html ||
-    challengeType === challengeTypes.modern
-  ) {
-    const { required = [], template = '' } = challengeMetaSelector(state);
-    challengeData = {
-      ...challengeData,
-      files: challengeFilesSelector(state),
-      required,
-      template
-    };
-  }
-  return challengeData;
-};
-
-export const canFocusEditorSelector = state => state[ns].canFocusEditor;
-export const inAccessibilityModeSelector = state =>
-  state[ns].inAccessibilityMode;
-
-const MAX_LOGS_SIZE = 64 * 1024;
 
 export const reducer = handleActions(
   {
-    [types.createFiles]: (state, { payload }) => ({
+    [actionTypes.submitChallenge]: state => ({
       ...state,
-      challengeFiles: payload
+      isSubmitting: true
     }),
-    [types.updateFile]: (state, { payload: { key, editorValue } }) => ({
+    [actionTypes.submitChallengeComplete]: state => ({
       ...state,
-      challengeFiles: {
-        ...state.challengeFiles,
-        [key]: {
-          ...state.challengeFiles[key],
-          contents: editorValue
-        }
+      isSubmitting: false
+    }),
+    [actionTypes.submitChallengeError]: state => ({
+      ...state,
+      isSubmitting: false
+    }),
+    [actionTypes.createFiles]: (state, { payload }) => ({
+      ...state,
+      challengeFiles: payload.map(challengeFile => ({
+        ...challengeFile,
+        seed: challengeFile.contents.slice(),
+        editableContents: getLines(
+          challengeFile.contents,
+          challengeFile.editableRegionBoundaries
+        ),
+        editableRegionBoundaries:
+          challengeFile.editableRegionBoundaries?.slice() ?? [],
+        seedEditableRegionBoundaries:
+          challengeFile.editableRegionBoundaries?.slice() ?? []
+      }))
+    }),
+    [actionTypes.updateFile]: (
+      state,
+      { payload: { fileKey, contents, editableRegionBoundaries } }
+    ) => {
+      const updates = {};
+      // if a given part of the payload is null, we leave that part of the state
+      // unchanged
+      if (editableRegionBoundaries !== null)
+        updates.editableRegionBoundaries = editableRegionBoundaries;
+      if (contents !== null) updates.contents = contents;
+      if (editableRegionBoundaries !== null && contents !== null)
+        updates.editableContents = getLines(contents, editableRegionBoundaries);
+      return {
+        ...state,
+        challengeFiles: state.challengeFiles.map(challengeFile =>
+          challengeFile.fileKey === fileKey
+            ? { ...challengeFile, ...updates }
+            : { ...challengeFile }
+        ),
+        isBuildEnabled: true
+      };
+    },
+    [actionTypes.initTests]: (state, { payload }) => ({
+      ...state,
+      challengeTests: payload
+    }),
+    [actionTypes.initHooks]: (state, { payload }) => ({
+      ...state,
+      challengeHooks: payload
+    }),
+    [actionTypes.updateTests]: (state, { payload }) => ({
+      ...state,
+      challengeTests: payload
+    }),
+    [actionTypes.initConsole]: (state, { payload }) => ({
+      ...state,
+      consoleOut: payload ? [payload] : []
+    }),
+    [actionTypes.updateConsole]: (state, { payload }) => ({
+      ...state,
+      consoleOut: state.consoleOut.concat(payload)
+    }),
+    [actionTypes.initLogs]: state => ({
+      ...state,
+      logsOut: []
+    }),
+    [actionTypes.updateLogs]: (state, { payload }) => ({
+      ...state,
+      logsOut: state.logsOut.concat(payload)
+    }),
+    [actionTypes.logsToConsole]: (state, { payload }) => ({
+      ...state,
+      consoleOut: isEmpty(state.logsOut)
+        ? state.consoleOut
+        : state.consoleOut.concat(payload, state.logsOut)
+    }),
+    [actionTypes.initVisibleEditors]: state => {
+      let persistingVisibleEditors = {};
+      const prevVisibleEditorKeys = Object.keys(state.visibleEditors);
+      if (prevVisibleEditorKeys.length > 1) {
+        // Restore states of relevant visible editors for the current challengeFiles
+        persistingVisibleEditors = prevVisibleEditorKeys
+          .filter(editorKey => {
+            return state.challengeFiles.find(
+              challengeFile => challengeFile.fileKey === editorKey
+            );
+          })
+          .reduce((visibleEditors, key) => {
+            visibleEditors[key] = state.visibleEditors[key];
+            return visibleEditors;
+          }, {});
       }
-    }),
-    [types.storedCodeFound]: (state, { payload }) => ({
-      ...state,
-      challengeFiles: payload
-    }),
-
-    [types.initTests]: (state, { payload }) => ({
-      ...state,
-      challengeTests: payload
-    }),
-    [types.updateTests]: (state, { payload }) => ({
-      ...state,
-      challengeTests: payload
-    }),
-
-    [types.initConsole]: (state, { payload }) => ({
-      ...state,
-      consoleOut: payload
-    }),
-    [types.updateConsole]: (state, { payload }) => ({
-      ...state,
-      consoleOut: state.consoleOut + '\n' + payload
-    }),
-    [types.initLogs]: state => ({
-      ...state,
-      logsOut: ''
-    }),
-    [types.updateLogs]: (state, { payload }) => ({
-      ...state,
-      logsOut: (state.logsOut + '\n' + payload).slice(-MAX_LOGS_SIZE)
-    }),
-    [types.logsToConsole]: (state, { payload }) => ({
-      ...state,
-      consoleOut:
-        state.consoleOut +
-        (state.logsOut ? '\n' + payload + '\n' + state.logsOut : '')
-    }),
-    [types.updateChallengeMeta]: (state, { payload }) => ({
+      return {
+        ...state,
+        visibleEditors: {
+          ...persistingVisibleEditors,
+          [getTargetEditor(state.challengeFiles)]: true
+        }
+      };
+    },
+    [actionTypes.updateChallengeMeta]: (state, { payload }) => ({
       ...state,
       challengeMeta: { ...payload }
     }),
-
-    [types.resetChallenge]: state => ({
+    [actionTypes.resetChallenge]: state => {
+      const challengeFilesReset = state.challengeFiles.map(challengeFile => ({
+        ...challengeFile,
+        contents: challengeFile.seed.slice(),
+        editableContents: getLines(
+          challengeFile.seed,
+          challengeFile.seedEditableRegionBoundaries
+        ),
+        editableRegionBoundaries:
+          challengeFile.seedEditableRegionBoundaries.slice()
+      }));
+      return {
+        ...state,
+        currentTab: 2,
+        challengeFiles: challengeFilesReset,
+        challengeTests: state.challengeTests.map(({ text, testString }) => ({
+          text,
+          testString
+        })),
+        consoleOut: [],
+        isResetting: true,
+        attempts: 0
+      };
+    },
+    [actionTypes.resetAttempts]: state => ({
       ...state,
-      currentTab: 2,
-      challengeFiles: {
-        ...Object.keys(state.challengeFiles)
-          .map(key => state.challengeFiles[key])
-          .reduce(
-            (files, file) => ({
-              ...files,
-              [file.key]: {
-                ...file,
-                contents: file.seed.slice()
-              }
-            }),
-            {}
-          )
-      },
-      challengeTests: state.challengeTests.map(({ text, testString }) => ({
-        text,
-        testString
-      })),
-      consoleOut: ''
+      attempts: 0
     }),
-    [types.updateBackendFormValues]: (state, { payload }) => ({
+    [actionTypes.stopResetting]: state => ({
       ...state,
-      backendFormValues: payload
+      isResetting: false
     }),
-    [types.updateProjectFormValues]: (state, { payload }) => ({
+    [actionTypes.updateSolutionFormValues]: (state, { payload }) => ({
       ...state,
       projectFormValues: payload
     }),
-
-    [types.lockCode]: state => ({
-      ...state,
-      isCodeLocked: true
-    }),
-    [types.unlockCode]: state => ({
-      ...state,
-      isBuildEnabled: true,
-      isCodeLocked: false
-    }),
-    [types.disableBuildOnError]: state => ({
+    [actionTypes.disableBuildOnError]: state => ({
       ...state,
       isBuildEnabled: false
     }),
-
-    [types.updateSuccessMessage]: (state, { payload }) => ({
+    [actionTypes.setShowPreviewPortal]: (state, { payload }) => ({
+      ...state,
+      showPreviewPortal: payload
+    }),
+    [actionTypes.setShowPreviewPane]: (state, { payload }) => ({
+      ...state,
+      showPreviewPane: payload
+    }),
+    [actionTypes.storePortalWindow]: (state, { payload }) => ({
+      ...state,
+      portalWindow: payload
+    }),
+    [actionTypes.removePortalWindow]: state => ({
+      ...state,
+      portalWindow: null
+    }),
+    [actionTypes.updateSuccessMessage]: (state, { payload }) => ({
       ...state,
       successMessage: payload
     }),
-    [types.closeModal]: (state, { payload }) => ({
+    [actionTypes.setIsAdvancing]: (state, { payload }) => ({
+      ...state,
+      isAdvancing: payload
+    }),
+    [actionTypes.setChapterSlug]: (state, { payload }) => ({
+      ...state,
+      chapterSlug: payload
+    }),
+    [actionTypes.setUserCompletedExam]: (state, { payload }) => ({
+      ...state,
+      userCompletedExam: payload
+    }),
+    [actionTypes.closeModal]: (state, { payload }) => ({
       ...state,
       modal: {
         ...state.modal,
         [payload]: false
       }
     }),
-    [types.openModal]: (state, { payload }) => ({
+    [actionTypes.openModal]: (state, { payload }) => {
+      const isProjectPreviewModal = payload === 'projectPreview';
+
+      return {
+        ...state,
+        modal: {
+          ...state.modal,
+          [payload]: true
+        },
+        isProjectPreviewLoading: isProjectPreviewModal
+          ? true
+          : state.isProjectPreviewLoading
+      };
+    },
+    [actionTypes.setProjectPreviewLoading]: (state, { payload }) => ({
       ...state,
-      modal: {
-        ...state.modal,
-        [payload]: true
+      isProjectPreviewLoading: payload
+    }),
+    [actionTypes.executeChallenge]: state => ({
+      ...state,
+      currentTab: 3,
+      attempts: state.attempts + 1,
+      isExecuting: true
+    }),
+    [actionTypes.executeChallengeComplete]: state => ({
+      ...state,
+      isExecuting: false
+    }),
+    [actionTypes.askSocrates]: state => ({
+      ...state,
+      socratesHintState: {
+        hint: null,
+        isLoading: true,
+        error: null,
+        attempts: state.socratesHintState.attempts,
+        limit: state.socratesHintState.limit
       }
     }),
-    [types.moveToTab]: (state, { payload }) => ({
+    [actionTypes.askSocratesComplete]: (state, { payload }) => ({
       ...state,
-      currentTab: payload
+      socratesHintState: {
+        hint: payload.hint,
+        isLoading: false,
+        error: null,
+        attempts: payload.attempts,
+        limit: payload.limit
+      }
     }),
-    [types.executeChallenge]: state => ({
+    [actionTypes.askSocratesError]: (state, { payload }) => ({
       ...state,
-      currentTab: 3
+      socratesHintState: {
+        hint: null,
+        isLoading: false,
+        error: payload.error,
+        attempts: payload.attempts ?? state.socratesHintState.attempts,
+        limit: payload.limit ?? state.socratesHintState.limit
+      }
     }),
-    [types.setEditorFocusability]: (state, { payload }) => ({
+    [actionTypes.setEditorFocusability]: (state, { payload }) => ({
       ...state,
       canFocusEditor: payload
     }),
-    [types.setAccessibilityMode]: (state, { payload }) => ({
+    [actionTypes.toggleVisibleEditor]: (state, { payload }) => {
+      return {
+        ...state,
+        visibleEditors: {
+          ...state.visibleEditors,
+          [payload]: !state.visibleEditors[payload]
+        }
+      };
+    },
+    [actionTypes.createQuestion]: (state, { payload }) => ({
       ...state,
-      inAccessibilityMode: payload
+      description: payload
     })
   },
   initialState

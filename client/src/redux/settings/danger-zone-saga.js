@@ -1,10 +1,12 @@
 import { navigate } from 'gatsby';
-import { call, put, takeEvery, take } from 'redux-saga/effects';
+import { call, put, take, takeEvery } from 'redux-saga/effects';
 
-import { deleteAccountError, resetProgressError } from './';
-import { resetUserData, fetchUser, types as appTypes } from '../';
-import { postResetProgress, postDeleteAccount } from '../../utils/ajax';
 import { createFlashMessage } from '../../components/Flash/redux';
+import { FlashMessages } from '../../components/Flash/redux/flash-messages';
+import { postDeleteAccount, postResetProgress } from '../../utils/ajax';
+import { actionTypes as appTypes } from '../action-types';
+import { fetchUser, resetUserData } from '../actions';
+import { deleteAccountError, resetProgressError } from './actions';
 
 function* deleteAccountSaga() {
   try {
@@ -12,12 +14,16 @@ function* deleteAccountSaga() {
     yield put(
       createFlashMessage({
         type: 'info',
-        message: 'Your account has been successfully deleted'
+        message: FlashMessages.AccountDeleted
       })
     );
-    // remove current user information from application state
+    // Navigate before signing out, since /settings will attempt to sign users
+    // back in if resetUserData fires while still on /settings.
+    void navigate('/learn');
+    // Wait for Gatsby to complete the route transition before clearing user
+    // data, ensuring /settings is unmounted and won't re-authenticate.
+    yield take(appTypes.routeUpdated);
     yield put(resetUserData());
-    yield call(navigate, '/');
   } catch (e) {
     yield put(deleteAccountError(e));
   }
@@ -29,7 +35,7 @@ function* resetProgressSaga() {
     yield put(
       createFlashMessage({
         type: 'info',
-        message: 'Your progress has been reset'
+        message: FlashMessages.ProgressReset
       })
     );
     // refresh current user data in application state

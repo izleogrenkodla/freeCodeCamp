@@ -1,9 +1,21 @@
 {
   "name": "@freecodecamp/curriculum",
+  "version": "0.0.0-next.4",
   "description": "freeCodeCamp's curriculum seed files",
-  "license": "(BSD-3-Clause AND CC-BY-SA-4.0)",
-  "author": "freeCodeCamp <team@freecodecamp.org>",
-  "homepage": "https://github.com/freeCodeCamp/freeCodeCamp#readme",
+  "license": "BSD-3-Clause",
+  "private": true,
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10"
+  },
+  "exports": {
+    "./build-certification": "./dist/build-certification.js",
+    "./build-curriculum": "./dist/build-curriculum.js",
+    "./build-superblock": "./dist/build-superblock.js",
+    "./file-handler": "./dist/file-handler.js",
+    "./get-challenges": "./dist/get-challenges.js",
+    "./super-order": "./dist/super-order.js"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/freeCodeCamp/freeCodeCamp.git"
@@ -11,79 +23,69 @@
   "bugs": {
     "url": "https://github.com/freeCodeCamp/freeCodeCamp/issues"
   },
-  "version": "0.0.0-next.4",
-  "main": "lib.js",
+  "homepage": "https://github.com/freeCodeCamp/freeCodeCamp#readme",
+  "author": "freeCodeCamp <team@freecodecamp.org>",
   "scripts": {
-    "develop": "gulp",
-    "lint": "gulp lint",
-    "semantic-release": "semantic-release",
-    "pretest": "cd ../client && npm run build:workers",
-    "test": "mocha --delay --reporter progress --bail"
-  },
-  "dependencies": {
-    "invariant": "^2.2.4"
+    "audit-challenges": "pnpm turbo setup && tsx ./src/challenge-auditor/index.ts",
+    "build": "node ./dist/generate/build-curriculum",
+    "type-check": "tsc --noEmit",
+    "create-empty-steps": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/create-empty-steps",
+    "create-next-challenge": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/create-next-challenge",
+    "create-this-challenge": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/create-this-challenge",
+    "create-next-step": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/create-next-step",
+    "create-next-task": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/create-next-task",
+    "insert-challenge": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/insert-challenge",
+    "insert-step": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/insert-step",
+    "insert-task": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/insert-task",
+    "install-puppeteer": "puppeteer browsers install chrome",
+    "delete-step": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/delete-step",
+    "delete-challenge": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/delete-challenge",
+    "delete-task": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/delete-task",
+    "lint": "eslint --max-warnings 0 && pnpm lint-challenges",
+    "lint-challenges": "tsx src/lint-localized",
+    "reorder-tasks": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/reorder-tasks",
+    "update-challenge-order": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/update-challenge-order",
+    "update-step-titles": "tsx --tsconfig ../tools/challenge-helper-scripts/tsconfig.json ../tools/challenge-helper-scripts/update-step-titles",
+    "setup": "tsc",
+    "test": "NODE_OPTIONS='--max-old-space-size=7168' pnpm test-gen && vitest run",
+    "test:watch": "pnpm test-gen && vitest",
+    "test-gen": "tsx ./src/test/utils/generate-block-tests.ts",
+    "test-tooling": "pnpm test --project @freecodecamp/curriculum",
+    "test-content": "pnpm test-gen && pnpm test --project test"
   },
   "devDependencies": {
-    "@babel/core": "^7.2.2",
-    "@babel/polyfill": "^7.2.5",
-    "@babel/preset-env": "^7.3.1",
-    "@babel/register": "^7.0.0",
-    "@commitlint/cli": "^7.0.0",
-    "@commitlint/config-conventional": "^7.0.1",
-    "@commitlint/travis-cli": "^7.0.0",
-    "@freecodecamp/challenge-md-parser": "^2.0.0",
-    "@semantic-release/changelog": "^2.0.2",
-    "@semantic-release/git": "^5.0.0",
-    "babel-cli": "^6.3.17",
-    "babel-plugin-add-module-exports": "^0.2.1",
-    "babel-plugin-lodash": "^3.3.4",
-    "babel-plugin-transform-imports": "^1.4.1",
-    "babel-plugin-transform-runtime": "^6.23.0",
-    "babel-preset-env": "^1.7.0",
-    "babel-preset-react": "^6.24.1",
-    "babel-preset-stage-0": "^6.3.13",
-    "babel-preset-stage-3": "^6.24.1",
-    "babel-standalone": "^6.26.0",
-    "chai": "4.2.0",
-    "fs-extra": "^6.0.1",
-    "gulp": "^4.0.0",
-    "joi": "^13.3.0",
-    "joi-objectid": "^2.0.0",
-    "jquery": "^3.4.1",
-    "js-yaml": "^3.12.0",
-    "jsdom": "^12.2.0",
-    "lint-staged": "^7.2.0",
-    "live-server": "^1.2.1",
-    "lodash": "^4.17.15",
-    "mocha": "5.2.0",
-    "puppeteer": "^1.19.0",
-    "readdirp-walk": "^1.7.0",
-    "rx": "^4.1.0",
-    "semantic-release": "^15.13.24",
-    "validator": "^10.4.0"
+    "@babel/core": "7.23.7",
+    "@babel/register": "7.23.7",
+    "@freecodecamp/browser-scripts": "workspace:*",
+    "@freecodecamp/challenge-builder": "workspace:*",
+    "@freecodecamp/challenge-linter": "workspace:*",
+    "@freecodecamp/eslint-config": "workspace:*",
+    "@freecodecamp/shared": "workspace:*",
+    "@total-typescript/ts-reset": "0.6.1",
+    "@types/debug": "4.1.12",
+    "@types/js-yaml": "4.0.5",
+    "@types/polka": "0.5.7",
+    "@types/string-similarity": "4.0.2",
+    "@typescript/vfs-1.6.1": "npm:@typescript/vfs@1.6.4",
+    "@vitest/ui": "4.0.15",
+    "eslint": "9.39.1",
+    "glob": "13.0.6",
+    "joi": "17.12.2",
+    "joi-objectid": "3.0.1",
+    "js-yaml": "4.0.0",
+    "jsdom": "16.7.0",
+    "lodash": "4.17.21",
+    "mocha": "10.3.0",
+    "mock-require": "3.0.3",
+    "ora": "5.4.1",
+    "polka": "0.5.2",
+    "puppeteer": "22.12.1",
+    "sirv": "3.0.2",
+    "string-similarity": "4.0.4",
+    "typescript-5.9.2": "npm:typescript@5.9.2",
+    "vitest": "4.0.15"
   },
-  "keywords": [
-    "challenges",
-    "curriculum",
-    "freecodecamp",
-    "interview",
-    "javascript",
-    "json"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "release": {
-    "branch": "master",
-    "verifyConditions": [
-      "@semantic-release/changelog",
-      "@semantic-release/npm",
-      "@semantic-release/git"
-    ],
-    "prepare": [
-      "@semantic-release/changelog",
-      "@semantic-release/npm",
-      "@semantic-release/git"
-    ]
+  "dependencies": {
+    "@types/node": "24.10.8"
   }
 }

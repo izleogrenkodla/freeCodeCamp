@@ -1,34 +1,69 @@
-import { call, delay, put, takeLatest, takeEvery } from 'redux-saga/effects';
-
+import { omit } from 'lodash-es';
 import {
-  updateUserFlagComplete,
-  updateUserFlagError,
-  validateUsernameComplete,
-  validateUsernameError,
+  call,
+  debounce,
+  put,
+  select,
+  takeEvery,
+  takeLatest
+} from 'redux-saga/effects';
+import store from 'store';
+import { navigate } from 'gatsby';
+
+import { Certification } from '@freecodecamp/shared/config/certification-settings';
+import { createFlashMessage } from '../../components/Flash/redux';
+import { liveCerts } from '../../../config/cert-and-project-map';
+import {
+  getUsernameExists,
+  putUpdateMyAbout,
+  putUpdateMyHonesty,
+  putUpdateMyKeyboardShortcuts,
+  putUpdateMyPortfolio,
+  putUpdateMyExperience,
+  putUpdateMyProfileUI,
+  putUpdateMyQuincyEmail,
+  putUpdateMySocrates,
+  putUpdateMySocials,
+  putUpdateMyUsername,
+  putVerifyCert
+} from '../../utils/ajax';
+import { completedChallengesSelector } from '../selectors';
+import {
+  resetMyEditorLayoutComplete,
+  resetMyEditorLayoutError,
   submitNewAboutComplete,
   submitNewAboutError,
   submitNewUsernameComplete,
   submitNewUsernameError,
   submitProfileUIComplete,
   submitProfileUIError,
+  updateMyHonestyComplete,
+  updateMyHonestyError,
+  updateMyKeyboardShortcutsComplete,
+  updateMyKeyboardShortcutsError,
+  updateMyPortfolioComplete,
+  updateMyPortfolioError,
+  updateMyExperienceComplete,
+  updateMyExperienceError,
+  updateMyQuincyEmailComplete,
+  updateMyQuincyEmailError,
+  updateMySocratesComplete,
+  updateMySocratesError,
+  updateMySocialsComplete,
+  updateMySocialsError,
+  updateMySoundComplete,
+  updateMySoundError,
+  validateUsernameComplete,
+  validateUsernameError,
   verifyCertComplete,
   verifyCertError
-} from './';
-import {
-  getUsernameExists,
-  putUpdateMyAbout,
-  putUpdateMyProfileUI,
-  putUpdateMyUsername,
-  putUpdateUserFlag,
-  putVerifyCert
-} from '../../utils/ajax';
-import { createFlashMessage } from '../../components/Flash/redux';
+} from './actions';
 
 function* submitNewAboutSaga({ payload }) {
   try {
-    const { data: response } = yield call(putUpdateMyAbout, payload);
-    yield put(submitNewAboutComplete({ ...response, payload }));
-    yield put(createFlashMessage(response));
+    const { data } = yield call(putUpdateMyAbout, payload);
+    yield put(submitNewAboutComplete({ ...data, payload }));
+    yield put(createFlashMessage(data));
   } catch (e) {
     yield put(submitNewAboutError(e));
   }
@@ -36,9 +71,11 @@ function* submitNewAboutSaga({ payload }) {
 
 function* submitNewUsernameSaga({ payload: username }) {
   try {
-    const { data: response } = yield call(putUpdateMyUsername, username);
-    yield put(submitNewUsernameComplete({ ...response, username }));
-    yield put(createFlashMessage(response));
+    const { data } = yield call(putUpdateMyUsername, username);
+    yield put(submitNewUsernameComplete({ ...data, username }));
+    // When the username is updated, the user would otherwise still be on their old profile:
+    navigate(`/${username}`);
+    yield put(createFlashMessage(data));
   } catch (e) {
     yield put(submitNewUsernameError(e));
   }
@@ -46,27 +83,120 @@ function* submitNewUsernameSaga({ payload: username }) {
 
 function* submitProfileUISaga({ payload }) {
   try {
-    const { data: response } = yield call(putUpdateMyProfileUI, payload);
-    yield put(submitProfileUIComplete({ ...response, payload }));
-    yield put(createFlashMessage(response));
-  } catch (e) {
+    const { data } = yield call(putUpdateMyProfileUI, payload);
+    yield put(submitProfileUIComplete({ ...data, payload }));
+    yield put(createFlashMessage(data));
+  } catch {
     yield put(submitProfileUIError);
   }
 }
 
-function* updateUserFlagSaga({ payload: update }) {
+function* updateMySocialsSaga({ payload: update }) {
   try {
-    const { data: response } = yield call(putUpdateUserFlag, update);
-    yield put(updateUserFlagComplete({ ...response, payload: update }));
-    yield put(createFlashMessage(response));
-  } catch (e) {
-    yield put(updateUserFlagError(e));
+    const { data } = yield call(putUpdateMySocials, update);
+    yield put(updateMySocialsComplete({ ...data, payload: update }));
+    yield put(createFlashMessage({ ...data }));
+  } catch {
+    yield put(updateMySocialsError);
+  }
+}
+
+function* updateMySoundSaga({ payload: update }) {
+  try {
+    store.set('fcc-sound', !!update.sound);
+    const data = {
+      message: 'flash.updated-sound',
+      type: 'success'
+    };
+    yield put(updateMySoundComplete({ ...data, payload: update }));
+    yield put(createFlashMessage({ ...data }));
+  } catch {
+    yield put(updateMySoundError);
+  }
+}
+
+function* resetMyEditorLayoutSaga() {
+  const layout = store.get('challenge-layout');
+
+  if (layout) {
+    try {
+      const data = {
+        message: 'flash.reset-editor-layout',
+        type: 'success'
+      };
+
+      store.remove('challenge-layout');
+
+      yield put(createFlashMessage({ ...data }));
+      yield put(resetMyEditorLayoutComplete({ ...data }));
+    } catch {
+      yield put(resetMyEditorLayoutError);
+    }
+  }
+}
+
+function* updateMyKeyboardShortcutsSaga({ payload: update }) {
+  try {
+    const { data } = yield call(putUpdateMyKeyboardShortcuts, update);
+    yield put(updateMyKeyboardShortcutsComplete({ ...data, payload: update }));
+    yield put(createFlashMessage({ ...data }));
+  } catch {
+    yield put(updateMyKeyboardShortcutsError);
+  }
+}
+
+function* updateMyHonestySaga({ payload: update }) {
+  try {
+    const { data } = yield call(putUpdateMyHonesty, update);
+    yield put(updateMyHonestyComplete({ ...data, payload: update }));
+    yield put(createFlashMessage({ ...data }));
+  } catch {
+    yield put(updateMyHonestyError);
+  }
+}
+
+function* updateMyQuincyEmailSaga({ payload: update }) {
+  try {
+    const { data } = yield call(putUpdateMyQuincyEmail, update);
+    yield put(updateMyQuincyEmailComplete({ ...data, payload: update }));
+    yield put(createFlashMessage({ ...data }));
+  } catch {
+    yield put(updateMyQuincyEmailError);
+  }
+}
+
+function* updateMySocratesSaga({ payload: update }) {
+  try {
+    const { data } = yield call(putUpdateMySocrates, update);
+    yield put(updateMySocratesComplete({ ...data, payload: update }));
+    yield put(createFlashMessage({ ...data }));
+  } catch {
+    yield put(updateMySocratesError);
+  }
+}
+
+function* updateMyPortfolioSaga({ payload: update }) {
+  try {
+    const { data } = yield call(putUpdateMyPortfolio, update);
+    yield put(updateMyPortfolioComplete({ ...data, payload: update }));
+    yield put(createFlashMessage({ ...data }));
+  } catch {
+    yield put(updateMyPortfolioError);
+  }
+}
+
+function* updateMyExperienceSaga({ payload: update }) {
+  try {
+    const { data } = yield call(putUpdateMyExperience, update);
+    yield put(updateMyExperienceComplete({ ...data, payload: update }));
+    yield put(createFlashMessage({ ...data }));
+  } catch {
+    yield put(updateMyExperienceError);
   }
 }
 
 function* validateUsernameSaga({ payload }) {
   try {
-    yield delay(500);
     const {
       data: { exists }
     } = yield call(getUsernameExists, payload);
@@ -77,11 +207,48 @@ function* validateUsernameSaga({ payload }) {
 }
 
 function* verifyCertificationSaga({ payload }) {
+  // check redux if can claim cert before calling backend
+  const currentCert = liveCerts.find(cert => cert.certSlug === payload);
+  const completedChallenges = yield select(completedChallengesSelector);
+  const certTitle = currentCert?.title || payload;
+
+  // (20/06/2022) Full Stack client-side validation is already done here:
+  // https://github.com/freeCodeCamp/freeCodeCamp/blob/main/client/src/components/settings/certification.js#L309
+  if (currentCert?.certSlug !== Certification.LegacyFullStack) {
+    const flash = {
+      type: 'info',
+      message: 'flash.incomplete-steps',
+      variables: { name: certTitle }
+    };
+
+    const currentCertIds = currentCert?.projects?.map(project => project.id);
+    const canClaimCert = currentCertIds.every(id =>
+      completedChallenges.find(challenge => challenge.id === id)
+    );
+
+    if (!canClaimCert) {
+      yield put(createFlashMessage(flash));
+      return;
+    }
+  }
+
+  // redux says challenges are complete, call back end
   try {
     const {
-      data: { response, isCertMap }
+      data: { response, isCertMap, completedChallenges }
     } = yield call(putVerifyCert, payload);
-    yield put(verifyCertComplete({ ...response, payload: isCertMap }));
+    yield put(
+      verifyCertComplete({
+        ...response,
+        payload: {
+          ...isCertMap,
+          completedChallenges: completedChallenges.map(x => ({
+            ...omit(x, 'files'),
+            challengeFiles: x.files ?? null
+          }))
+        }
+      })
+    );
     yield put(createFlashMessage(response));
   } catch (e) {
     yield put(verifyCertError(e));
@@ -90,10 +257,18 @@ function* verifyCertificationSaga({ payload }) {
 
 export function createSettingsSagas(types) {
   return [
-    takeEvery(types.updateUserFlag, updateUserFlagSaga),
+    takeEvery(types.updateMySocials, updateMySocialsSaga),
+    takeEvery(types.updateMyHonesty, updateMyHonestySaga),
+    takeEvery(types.updateMySound, updateMySoundSaga),
+    takeEvery(types.resetMyEditorLayout, resetMyEditorLayoutSaga),
+    takeEvery(types.updateMyKeyboardShortcuts, updateMyKeyboardShortcutsSaga),
+    takeEvery(types.updateMyQuincyEmail, updateMyQuincyEmailSaga),
+    takeEvery(types.updateMySocrates, updateMySocratesSaga),
+    takeEvery(types.updateMyPortfolio, updateMyPortfolioSaga),
+    takeEvery(types.updateMyExperience, updateMyExperienceSaga),
     takeLatest(types.submitNewAbout, submitNewAboutSaga),
     takeLatest(types.submitNewUsername, submitNewUsernameSaga),
-    takeLatest(types.validateUsername, validateUsernameSaga),
+    debounce(2000, types.validateUsername, validateUsernameSaga),
     takeLatest(types.submitProfileUI, submitProfileUISaga),
     takeEvery(types.verifyCert, verifyCertificationSaga)
   ];

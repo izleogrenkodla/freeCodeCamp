@@ -1,11 +1,11 @@
 import { navigate } from 'gatsby';
+import { isError } from 'lodash-es';
 import { takeEvery, put } from 'redux-saga/effects';
-import { isError } from 'lodash';
 
+import { createFlashMessage } from '../components/Flash/redux';
 import { isHandledError, unwrapHandledError } from '../utils/handled-error';
 import { reportClientSideError } from '../utils/report-error';
-import { createFlashMessage } from '../components/Flash/redux';
-import reportedErrorMessage from '../utils/reportedErrorMessage';
+import { reportedErrorMessage } from '../utils/error-messages';
 
 const errorActionSelector = action => isError(action.payload);
 
@@ -22,4 +22,6 @@ function* errorHandlerSaga({ payload: error }) {
   yield put(createFlashMessage(reportedErrorMessage));
 }
 
-export default [takeEvery(errorActionSelector, errorHandlerSaga)];
+const errorSagas = [takeEvery(errorActionSelector, errorHandlerSaga)];
+
+export default errorSagas;

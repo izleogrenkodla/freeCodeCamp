@@ -1,10 +1,11 @@
-/* global expect */
-
-import { Subject } from 'rxjs';
 import { ActionsObservable, StateObservable } from 'redux-observable';
-import failedUpdatesEpic from './failed-updates-epic';
-import { types } from './';
+import { Subject } from 'rxjs';
 import store from 'store';
+import { describe, it, expect, vi } from 'vitest';
+import { actionTypes } from './action-types';
+import failedUpdatesEpic from './failed-updates-epic';
+
+vi.mock('../analytics');
 
 const key = 'fcc-failed-updates';
 
@@ -13,7 +14,7 @@ describe('failed-updates-epic', () => {
     store.set(key, failedSubmissions);
 
     const action$ = ActionsObservable.of({
-      type: types.updateComplete
+      type: actionTypes.updateComplete
     });
     const state$ = new StateObservable(new Subject(), initialState);
     const epic$ = failedUpdatesEpic(action$, state$);
@@ -27,7 +28,8 @@ describe('failed-updates-epic', () => {
 const initialState = {
   app: {
     isOnline: true,
-    appUsername: 'developmentuser'
+    isServerOnline: true,
+    user: { sessionUser: {} }
   }
 };
 

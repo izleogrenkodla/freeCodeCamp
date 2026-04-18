@@ -1,14 +1,14 @@
-/* global HOME_PATH */
 import { ofType } from 'redux-observable';
 import { tap, ignoreElements } from 'rxjs/operators';
 
-import { types } from './';
+import { actionTypes } from './action-types';
 
-export default function hardGoToEpic(action$, _, { location }) {
+// The third argument contains dependencies, see createEpicMiddleware
+export default function hardGoToEpic(action$, _, { window }) {
   return action$.pipe(
-    ofType(types.hardGoTo),
-    tap(({ payload = HOME_PATH }) => {
-      location.href = payload;
+    ofType(actionTypes.hardGoTo),
+    tap(({ payload }) => {
+      window.location.href = payload;
     }),
     ignoreElements()
   );

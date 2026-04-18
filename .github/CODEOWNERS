@@ -1,5 +1,5 @@
 # -------------------------------------------------
-# CODEOWNERS - For automated review request for 
+# CODEOWNERS - For automated review request for
 # high impact files.
 #
 # Important: The order in this file cascades.
@@ -8,14 +8,29 @@
 # -------------------------------------------------
 
 # -------------------------------------------------
-# All files except markdown are owned by dev team
+# Files that need attention from primary teams
 # -------------------------------------------------
 
-* @freecodecamp/dev-team
-*.md
+# --- All files
+* @freecodecamp/dev-team @freecodecamp/curriculum
+
+# --- Package files for negation ---
+
+**/package.json @freecodecamp/none
+**/pnpm-lock.yaml @freecodecamp/none
 
 # -------------------------------------------------
-# All files in the root are owned by dev team
+# Files that need attention from i18n & dev team
 # -------------------------------------------------
 
-/* @freecodecamp/dev-team
+# i18n Quotes
+**/motivation.json @freeCodeCamp/dev-team @freeCodeCamp/i18n
+
+
+# -------------------------------------------------
+# Files that need attention from the mobile team
+# -------------------------------------------------
+
+/client/src/redux/prop-types.ts @freeCodeCamp/dev-team @freeCodeCamp/mobile
+/client/tools/external-curriculum/* @freeCodeCamp/dev-team @freeCodeCamp/mobile
+/curriculum/schema/challenge-schema.js @freeCodeCamp/dev-team @freeCodeCamp/mobile
